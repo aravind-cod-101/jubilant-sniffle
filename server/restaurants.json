@@ -1,0 +1,14 @@
+[
+    {
+      "id": 1,
+      "name": "Manoj Bhavan",
+      "location": "Chennai",
+      "price": 6
+    },
+    {
+      "id": 2,
+      "name": "Al-Buhari",
+      "location": "Chennai",
+      "price": 4
+    }
+  ]
