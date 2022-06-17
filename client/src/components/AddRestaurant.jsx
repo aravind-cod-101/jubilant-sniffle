@@ -1,9 +1,13 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import { useState } from 'react'
-const AddRestaurant = () => {
+import restaurantFinder from '../api/restaurantFinder';
+import { RestaurantsContext } from './../context/RestaurantContext';
+const AddRestaurant = (props) => {
     const [name,setName] = useState('');
     const [location,setLocation] = useState('')
     const [price,setPrice]= useState('')
+
+    const {addRestaurants} = useContext(RestaurantsContext);
 
 const initialValues = {
     name,
@@ -23,10 +27,23 @@ const handleChangePrice = (e) => {
 }
 
 
-const handleSubmit = (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault()
     
     console.log(initialValues)
+try{
+
+    const response = await restaurantFinder.post('/',initialValues)
+console.log(response)
+
+addRestaurants(response.data.data.restaurant[0])
+
+
+}catch(e){
+    console.log(e)
+}
+
+
 }
 
   return (

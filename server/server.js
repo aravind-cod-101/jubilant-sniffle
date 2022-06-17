@@ -12,16 +12,43 @@ app.get("/", (req, res) => {
   res.send("Welcome to YELP!!");
 });
 
+app.get("/api/v1/restaurants/:id/reviewCount", async (req, res) => {
+  try {
+    const average_rating = await db.query(
+      "select trunc(AVG(rating),2) as average_rating from reviews where restaurant_id=$1",
+      [req.params.id]
+    );
+    const count = await db.query(
+      "select COUNT(rating) from reviews where restaurant_id=$1",
+      [req.params.id]
+    );
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        count: count.rows[0],
+        average: average_rating.rows[0],
+      },
+    });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
 // Get all restaurants
 app.get("/api/v1/restaurants", async (req, res) => {
   try {
-    const results = await db.query("select * from restaurants");
+    // const results = await db.query("select * from restaurants");
+    const restaurantReviewData = await db.query(
+      "select * from restaurants left join (select restaurant_id, COUNT(*), trunc(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id"
+    );
     console.log("Getting all the restaurants...");
+
     res.status(200).json({
       status: "success",
-      results: results.rows.length,
+      results: restaurantReviewData.rows.length,
       data: {
-        restaurants: results.rows,
+        restaurants: restaurantReviewData.rows,
       },
     });
   } catch (error) {
@@ -38,15 +65,21 @@ app.get("/api/v1/restaurants", async (req, res) => {
 // Get a single restaurant
 app.get("/api/v1/restaurants/:id", async (req, res) => {
   try {
-    console.log(req);
+    const restaurant = await db.query(
+      "select * from restaurants left join (select restaurant_id, COUNT(*), trunc(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id where id= $1",
+      [req.params.id]
+    );
 
-    const record = await db.query("select * from restaurants where id= $1", [
-      req.params.id,
-    ]);
+    const reviews = await db.query(
+      "select * from reviews where restaurant_id = $1",
+      [req.params.id]
+    );
+
     res.status(200).json({
       status: "success",
       data: {
-        restaurant: record.rows[0],
+        restaurant: restaurant.rows[0],
+        reviews: reviews.rows,
       },
     });
   } catch (err) {
@@ -63,7 +96,6 @@ app.get("/api/v1/restaurants/:id", async (req, res) => {
 // Post method
 app.post("/api/v1/restaurants", async (req, res) => {
   try {
-    console.log(req.body);
     const data = req.body;
     const results = await db.query(
       "insert into restaurants (name,location,price) values($1,$2,$3) returning *",
@@ -86,10 +118,28 @@ app.post("/api/v1/restaurants", async (req, res) => {
   }
 });
 
+// post method for review
+app.post("/api/v1/restaurants/:id/addReview", async (req, res) => {
+  try {
+    const newReview = await db.query(
+      "insert into reviews(restaurant_id,name,review,rating) values($1,$2,$3,$4) returning *",
+      [req.params.id, req.body.name, req.body.review, req.body.rating]
+    );
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        review: newReview.rows[0],
+      },
+    });
+  } catch (err) {
+    console.log(err);
+  }
+});
+
 // update method
 app.put("/api/v1/restaurants/:id", async (req, res) => {
   try {
-    console.log(req.body);
     console.log(req.params.id);
     const result = await db.query(
       "update restaurants set name = $1, location = $2, price=$3 where id = $4 returning *",
